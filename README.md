@@ -1,10 +1,6 @@
-# geometric_ml
-This repository contains:
+# Geo Latte
 
-- Matlab code (not maintained)
-- Python code
-
-to apply Riemannian geometry in machine learning.
+Preliminary examples on how to apply Riemannian geometry in machine learning.
 
 1. Construct Riemannian metrics.
 2. Compute shortest paths.
@@ -17,8 +13,6 @@ Most of the methods have been proposed in the following papers:
 - "Latent Space Oddity: on the Curvature of Deep Generative Models", G. Arvanitidis, et. at., ICLR 2018
 - "Fast and Robust Shortest Paths on Data Learned Manifolds", G. Arvanitidis, et. al., AISTATS 2019
 - "Geometrically Enriched Latent Spaces", G. Arvanitidis, et. al., AISTATS 2021
-
-This code is published for research purposes only. Please cite the corresponding papers in case you use parts of this code base.
 
 
 

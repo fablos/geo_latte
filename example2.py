@@ -151,7 +151,6 @@ def gamma(Z):
     gamma_res = torch.exp(-utils.pairwise_dist2_torch(Z, C_rbf) * G_rbf.T) @ W_rbf.T + zeta_rbf
     return gamma_res
 
-
 rbf_iters = 5000
 RBF_LOSS = np.zeros((rbf_iters, 1))
 for iter in range(rbf_iters):

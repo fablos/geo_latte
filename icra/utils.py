@@ -84,7 +84,7 @@ class Poly2(nn.Module):
         c = self.points().detach().cpu().numpy()
         plt.plot(c[:, 0], c[:, 1], *args, **kwargs)
 
-def connecting_geodesic(model, curve, energy_fun, max_iter = 200, lr = 0.1):
+def connecting_geodesic(model, curve, energy_fun, max_iter=200, lr=0.1):
     opt = torch.optim.RMSprop(curve.parameters(), lr=lr)
     def closure():
         opt.zero_grad()

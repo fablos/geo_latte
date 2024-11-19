@@ -1,5 +1,5 @@
 import numpy as np
-from python.core import utils, geodesics, geometric_methods, manifolds
+from core import utils, geodesics, geometric_methods, manifolds
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 

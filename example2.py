@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from python.core import utils, generative_models, manifolds, geodesics
+from core import utils, generative_models, manifolds, geodesics
 import matplotlib.pyplot as plt
 import gc
 from sklearn.cluster import KMeans

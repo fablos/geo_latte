@@ -60,8 +60,7 @@ for k in range(2):
 pdf_vals = np.zeros((Z_grid.shape[0], 1))
 for k in range(2):
     pdf_vals += land_res_prior['Weights'][k, 0] * (np.exp(-0.5 * np.diag(Logmaps[k, :, :] @ np.linalg.inv(land_res_prior['Sigmas'][k, :, :]) @ Logmaps[k, :, :].T)) / land_res_prior['Consts'][k, 0]).reshape(-1, 1)
-plt.imshow(pdf_vals.reshape(N_Z_grid, N_Z_grid), interpolation='bicubic',
-           extent=(z1min, z1max, z2min, z2max), origin='lower')
+plt.imshow(pdf_vals.reshape(N_Z_grid, N_Z_grid), interpolation='bicubic', extent=(z1min, z1max, z2min, z2max), origin='lower')
 
 
 

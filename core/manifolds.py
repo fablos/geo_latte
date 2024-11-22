@@ -344,8 +344,22 @@ class ManifoldPullBack:
 # Note: local diagonal PCA with projection
 # This is the classical local diagonal PCA metric
 class LocalDiagPCA:
+    """
+    The LocalDiagPCA class implements a local diagonal Principal Component Analysis (PCA) metric. This class is designed to compute a local metric tensor based on the PCA of the data points in a neighborhood around a given point. The metric tensor is diagonal, which simplifies computations and is useful in various machine learning and data analysis tasks.
+    The class is initialized with several parameters:
+
+    """
 
     def __init__(self, data, sigma, rho, with_projection=False, A=None, b=None):
+        """
+        Initialize the LocalDiagPCA class with the given parameters
+        Args:
+            data: The dataset, which is an (N \times D) matrix where (N) is the number of data points and (D) is the dimensionality.
+            sigma: The bandwidth of the Gaussian kernel used to weigh the data points.
+            rho: A regularization parameter to ensure numerical stability.
+            with_projection: A boolean indicating whether to apply a linear projection to the data.
+            A and b: The projection matrix and bias vector, respectively, used if with_projection is True.
+        """
         self.with_projection = with_projection
         if with_projection:
             self.data = (data - b.reshape(1, -1)) @ A  # NxD

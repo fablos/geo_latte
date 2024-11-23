@@ -163,5 +163,5 @@ cython_debug/
 .idea/
 #checkpoints/
 .ipynb_checkpoints/
-data/
+icra/data/MNIST/
 

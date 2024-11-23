@@ -1,5 +1,5 @@
 import numpy as np
-from python.core import geodesics
+from core import geodesics
 import matplotlib.pyplot as plt
 from sklearn.metrics import pairwise_distances
 

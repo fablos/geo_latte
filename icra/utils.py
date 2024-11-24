@@ -64,21 +64,52 @@ def connecting_geodesic(model, curve, energy_fun, max_iter=200, lr=0.1):
     return __energy
 
 
+## VAE Part
+
+def mnist_subsample(data, targets, num_data, num_classes):
+    idx = targets < num_classes
+    new_data = data[idx][:num_data].unsqueeze(1).to(torch.float32) / 255
+    new_targets = targets[idx][:num_data]
+
+    return torch.utils.data.TensorDataset(new_data, new_targets)
+
+
+def get_encoder(z_dim):
+    return nn.Sequential(
+        nn.Conv2d(1, 16, 3, stride=2, padding=1),
+        nn.Softplus(),
+        nn.Conv2d(16, 32, 3, stride=2, padding=1),
+        nn.Flatten(),
+        nn.Linear(1568, 2*z_dim),
+    )
+
+def get_decoder(z_dim):
+    decoder_net = nn.Sequential(
+        nn.Linear(z_dim, 512),
+        nn.Unflatten(-1, (32, 4, 4)),
+        nn.Softplus(),
+        nn.ConvTranspose2d(32, 32, 3, stride=2, padding=1, output_padding=0),
+        nn.Softplus(),
+        nn.ConvTranspose2d(32, 16, 3, stride=2, padding=1, output_padding=1),
+        nn.Softplus(),
+        nn.ConvTranspose2d(16, 1, 3, stride=2, padding=1, output_padding=1),
+    )
+    return decoder_net
 
 
 class GaussianPrior(nn.Module):
-    def __init__(self, M):
+    def __init__(self, z_dim):
         """
         Define a Gaussian prior distribution with zero mean and unit variance.
 
                 Parameters:
-        M: [int]
+        z_dim: [int]
            Dimension of the latent space.
         """
         super(GaussianPrior, self).__init__()
-        self.M = M
-        self.mean = nn.Parameter(torch.zeros(self.M), requires_grad=False)
-        self.std = nn.Parameter(torch.ones(self.M), requires_grad=False)
+        self.z_dim = z_dim
+        self.mean = nn.Parameter(torch.zeros(self.z_dim), requires_grad=False)
+        self.std = nn.Parameter(torch.ones(self.z_dim), requires_grad=False)
 
     def forward(self):
         """

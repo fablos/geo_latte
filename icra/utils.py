@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.distributions as td
+from stochman import CubicSpline
 from torch.distributions.kl import kl_divergence as KL
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -39,6 +40,16 @@ class Poly2(nn.Module):
         c = self.points().detach().cpu().numpy()
         plt.plot(c[:, 0], c[:, 1], *args, **kwargs)
 
+
+class Spline(CubicSpline):
+    # write the init function passing all the arguments to the parent class
+    def __init__(self, *args, **kwargs):
+        super(Spline, self).__init__(*args, **kwargs)
+
+    def points(self):
+        return self.forward(torch.linspace(0, 1, self._num_nodes, device=self.device))
+
+
 def connecting_geodesic(model, curve, energy_fun, max_iter=200, lr=0.1):
     opt = torch.optim.RMSprop(curve.parameters(), lr=lr)
     def closure():
@@ -51,6 +62,8 @@ def connecting_geodesic(model, curve, energy_fun, max_iter=200, lr=0.1):
         opt.zero_grad()
         __energy = opt.step(closure)
     return __energy
+
+
 
 
 class GaussianPrior(nn.Module):

@@ -2,54 +2,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.distributions as td
+from stochman import CubicSpline
 from torch.distributions.kl import kl_divergence as KL
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-
-class DensityMetric(nn.Module):
-    def __init__(self, data, sigma):
-        super(DensityMetric, self).__init__()
-        self.data = data
-        self.sigma = sigma
-
-    def density(self, x):
-        """
-        Evaluate a kernel density estimate at x. It builds a gaussian around each point x
-
-        Parameters:
-        x: points where the density is evaluated. Dimensions (num_points)x(data_dim)
-        """
-        N, D = x.shape
-        M, _ = self.data.shape
-        sigma2 = self.sigma**2
-        normalization = (2 * 3.14159)**(D/2) * self.sigma**D  # scalar
-        distances = torch.cdist(x, self.data)  # NxM
-        K = torch.exp(-0.5 * distances**2 / sigma2) / normalization  # NxM
-        p = torch.sum(K, dim=1)  # N
-        return p
-
-    def curve_energy(self, C):
-        """
-        Compute the length of a curve when passed through the decoder mean.
-
-        Parameters:
-        C: points along a curve. Dimensions (batch)x(num_points_along_curve)x(data_dim)
-        """
-        pass # XXX: remove me!
-
-        if C.dim() == 2:
-            C = C.unsqueeze(0)
-        B, lenT, D = C.shape
-        CC = C.reshape(-1, D)
-        p = self.density(CC)  # (B*lenT)
-
-        metric = 1 / (p + 1e-4).reshape(B, lenT)  # (B)x(lenT)
-        avg_metric = 0.5 * metric[:, 1:] + 0.5 * metric[:, :-1]  # (B)x(lenT-1)
-
-        delta = C[:, 1:] - C[:, :-1]  # (B)x(lenT-1)x(D)
-        energy = torch.sum(torch.sum(delta ** 2, dim=2) * avg_metric, dim=1)  # (B)
-
-        return energy
 
 # I can use spline from the StochMan library
 class Poly2(nn.Module):
@@ -84,6 +40,16 @@ class Poly2(nn.Module):
         c = self.points().detach().cpu().numpy()
         plt.plot(c[:, 0], c[:, 1], *args, **kwargs)
 
+
+class Spline(CubicSpline):
+    # write the init function passing all the arguments to the parent class
+    def __init__(self, *args, **kwargs):
+        super(Spline, self).__init__(*args, **kwargs)
+
+    def points(self):
+        return self.forward(torch.linspace(0, 1, self._num_nodes, device=self.device))
+
+
 def connecting_geodesic(model, curve, energy_fun, max_iter=200, lr=0.1):
     opt = torch.optim.RMSprop(curve.parameters(), lr=lr)
     def closure():
@@ -98,19 +64,52 @@ def connecting_geodesic(model, curve, energy_fun, max_iter=200, lr=0.1):
     return __energy
 
 
+## VAE Part
+
+def mnist_subsample(data, targets, num_data, num_classes):
+    idx = targets < num_classes
+    new_data = data[idx][:num_data].unsqueeze(1).to(torch.float32) / 255
+    new_targets = targets[idx][:num_data]
+
+    return torch.utils.data.TensorDataset(new_data, new_targets)
+
+
+def get_encoder(z_dim):
+    return nn.Sequential(
+        nn.Conv2d(1, 16, 3, stride=2, padding=1),
+        nn.Softplus(),
+        nn.Conv2d(16, 32, 3, stride=2, padding=1),
+        nn.Flatten(),
+        nn.Linear(1568, 2*z_dim),
+    )
+
+def get_decoder(z_dim):
+    decoder_net = nn.Sequential(
+        nn.Linear(z_dim, 512),
+        nn.Unflatten(-1, (32, 4, 4)),
+        nn.Softplus(),
+        nn.ConvTranspose2d(32, 32, 3, stride=2, padding=1, output_padding=0),
+        nn.Softplus(),
+        nn.ConvTranspose2d(32, 16, 3, stride=2, padding=1, output_padding=1),
+        nn.Softplus(),
+        nn.ConvTranspose2d(16, 1, 3, stride=2, padding=1, output_padding=1),
+    )
+    return decoder_net
+
+
 class GaussianPrior(nn.Module):
-    def __init__(self, M):
+    def __init__(self, z_dim):
         """
         Define a Gaussian prior distribution with zero mean and unit variance.
 
                 Parameters:
-        M: [int]
+        z_dim: [int]
            Dimension of the latent space.
         """
         super(GaussianPrior, self).__init__()
-        self.M = M
-        self.mean = nn.Parameter(torch.zeros(self.M), requires_grad=False)
-        self.std = nn.Parameter(torch.ones(self.M), requires_grad=False)
+        self.z_dim = z_dim
+        self.mean = nn.Parameter(torch.zeros(self.z_dim), requires_grad=False)
+        self.std = nn.Parameter(torch.ones(self.z_dim), requires_grad=False)
 
     def forward(self):
         """

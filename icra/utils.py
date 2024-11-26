@@ -26,7 +26,7 @@ class Poly2(nn.Module):
         self.w = nn.Parameter(torch.zeros_like(self.x0, device=device))  # 1xD
 
     def points(self):
-        return self.forward(torch.linspace(0, 1, self.N, device=self.device))
+        return self.forward(torch.linspace(0, 1, self.N, device=self.device, dtype=torch.float32))
 
     def forward(self, t):
         _t = t.reshape(-1, 1)  # Tx1
@@ -292,3 +292,44 @@ class VAE(nn.Module):
         delta = (ambient_C[1:] - ambient_C[:-1])  # (|T|-1) x (data_shape)
         retval = torch.sum(delta.reshape(lenT-1, -1)**2, dim=1).sum(dim=0)  # scalar
         return retval
+
+
+class DensityMetric(nn.Module):
+    def __init__(self, data, sigma):
+        super(DensityMetric, self).__init__()
+        self.data = data
+        self.sigma = sigma
+
+    def density(self, x):
+        """
+        Evaluate a kernel density estimate at x.
+
+        Parameters:
+        x: points where the density is evaluated. Dimensions (num_points)x(data_dim)
+        """
+        N, D = x.shape
+        M, _ = self.data.shape
+        sigma2 = self.sigma**2
+        normalization = (2 * 3.14159)**(D/2) * self.sigma**D  # scalar
+        distances = torch.cdist(x, self.data)  # NxM
+        K = torch.exp(-0.5 * distances**2 / sigma2) / normalization  # NxM
+        p = torch.sum(K, dim=1)  # N
+        return p
+
+    def curve_energy(self, C):
+        """
+        Compute the length of a curve
+
+        Parameters:
+        C: points along a curve. Dimensions (batch)x(num_points_along_curve)x(data_dim)
+        """
+        if C.dim() == 2:
+            C = C.unsqueeze(0)
+        B, lenT, D = C.shape
+        CC = C.reshape(-1, D)
+        p = self.density(CC)  # (B*lenT)
+        metric = 1 / (p + 1e-4).reshape(B, lenT)  # (B)x(lenT)
+        avg_metric = 0.5 * metric[:, 1:] + 0.5 * metric[:, :-1]  # (B)x(lenT-1)
+        delta = C[:, 1:] - C[:, :-1]  # (B)x(lenT-1)x(D)
+        energy = torch.sum(torch.sum(delta**2, dim=2) * avg_metric, dim=1)  # (B)
+        return energy

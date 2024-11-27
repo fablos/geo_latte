@@ -120,7 +120,8 @@ def plot_measure(manifold, linspace_x1, linspace_x2, isLog=True, cmapSel=cm.RdBu
     else:
         img = img
 
-    plt.imshow(img, interpolation='gaussian', origin='lower',
+    plt.imshow(img, interpolation='gaussian',
+               origin='lower',
                extent=(linspace_x1.min(), linspace_x1.max(), linspace_x2.min(), linspace_x2.max()),
                cmap=cmapSel, aspect='equal')
 

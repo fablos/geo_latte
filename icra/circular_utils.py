@@ -72,7 +72,7 @@ class DumbDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return self.z[idx], self.y[idx]
 
-def get_decoder(z_dim=2):
+def get_decoder(z_dim=2, out_dim=100):
     decoder_net = nn.Sequential(
         nn.Linear(z_dim, 10),
         nn.Tanh(),
@@ -80,7 +80,7 @@ def get_decoder(z_dim=2):
         nn.Tanh(),
         nn.Linear(20, 50),
         nn.Tanh(),
-        nn.Linear(50, 100),
+        nn.Linear(50, out_dim),
         nn.Tanh(),
     )
     return decoder_net

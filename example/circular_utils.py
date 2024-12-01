@@ -1,6 +1,9 @@
 import numpy as np
 import torch
+from stochman.manifold import EmbeddedManifold
 from torch import nn
+from torch.func import jacrev, jacfwd, vmap
+from torch.distributions import MultivariateNormal
 
 
 # Function to generate circular distribution with a hole
@@ -133,3 +136,61 @@ class DensityMetric(nn.Module):
         delta = C[:, 1:] - C[:, :-1]  # (B)x(lenT-1)x(D)
         energy = torch.sum(torch.sum(delta**2, dim=2) * avg_metric, dim=1)  # (B)
         return energy
+
+class DoubleDecoder(nn.Module):
+    def __init__(self, z_dim=2, out_dim=100, mean_value=0.0, std_value=1.0, device='cpu'):
+        super(DoubleDecoder, self).__init__()
+        self.z_dim = z_dim
+        self.out_dim = out_dim
+        self.mu = get_decoder()
+        self.sigma = get_decoder()
+        _mean = torch.full((out_dim,), mean_value, device=device)
+        _std = torch.full((out_dim,), std_value, device=device)
+        covariance_matrix = torch.diag(_std ** 2)  # Diagonal covariance matrix
+        self.noise = MultivariateNormal(_mean, covariance_matrix)
+        self.diagonalizer = torch.vmap(torch.diag)
+
+    def forward(self, x, randomness=False, return_sigma=False):
+        if randomness:
+            noise = self.noise.sample((x.shape[0],)).to(x.device)
+            diag_noise = self.diagonalizer(noise)
+        else:
+            diag_noise = torch.eye(self.out_dim).repeat(x.shape[0], 1, 1).to(x.device)
+
+        I = torch.eye(self.out_dim).repeat(x.shape[0], 1, 1).to(x.device)
+        A = torch.concat((I, diag_noise), dim=2)
+        _sigma = self.sigma(x)
+        _mu = self.mu(x)
+        v = torch.concat((_mu, _sigma), dim=1)
+        _y_hat = torch.matmul(A, v.unsqueeze(-1)).squeeze(-1)
+        if return_sigma:
+            return _y_hat, _sigma
+        else:
+            return _y_hat
+
+
+class DoubleDecoderInducedManifold(EmbeddedManifold):
+    def __init__(self, decoder, input_dim=2):
+        self.decoder = decoder
+        self.input_dim = input_dim
+
+    def metric(self, points: torch.Tensor):
+        _, J_mean, J_sigma = self.embed(points, jacobian=True)  # NxDx(d)
+        M_m = torch.einsum("bji,bjk->bik", J_mean, J_mean)
+        M_s = torch.einsum("bji,bjk->bik", J_sigma, J_sigma)
+        return M_m + M_s
+
+    def embed(self, c, jacobian=False):
+        reshaped = False
+        if c.dim() == 3:
+            B, N, D = c.shape
+            c = c.reshape(-1, self.input_dim)
+            reshaped = True
+        out = self.decoder(c)
+        out = out.reshape(B, N, -1) if reshaped else out
+        if jacobian:
+            J_mean = vmap(jacfwd(self.decoder.mu))(c)
+            J_sigma = vmap(jacfwd(self.decoder.sigma))(c)
+            return out, J_mean, J_sigma
+        else:
+            return out

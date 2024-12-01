@@ -11,6 +11,12 @@ rbrown_yellow_cmap = mcolors.LinearSegmentedColormap.from_list(cmap_name, [
     "#EAE5BF"   # Pale yellow (center color)
 ])
 
+rbrown_yellow_cmap_inv = mcolors.LinearSegmentedColormap.from_list(cmap_name, [
+    "#EAE5BF",  # Pale yellow (center color)
+    "#B17359",  # Medium reddish-brown
+    "#5E2C1E"  # Deep reddish-brown
+])
+
 # Create a custom colormap with more brown tones
 # brownish_cmap = mcolors.LinearSegmentedColormap.from_list("brownish",colors=[
 #                                                             (0.4, 0.2, 0.1),  # Brown

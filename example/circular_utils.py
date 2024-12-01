@@ -149,10 +149,11 @@ class DoubleDecoder(nn.Module):
         covariance_matrix = torch.diag(_std ** 2)  # Diagonal covariance matrix
         self.noise = MultivariateNormal(_mean, covariance_matrix)
         self.diagonalizer = torch.vmap(torch.diag)
+        self.noise_scaler = 0.1
 
     def forward(self, x, randomness=False, return_sigma=False):
         if randomness:
-            noise = self.noise.sample((x.shape[0],)).to(x.device)
+            noise = self.noise.sample((x.shape[0],)).to(x.device) * self.noise_scaler
             diag_noise = self.diagonalizer(noise)
         else:
             diag_noise = torch.eye(self.out_dim).repeat(x.shape[0], 1, 1).to(x.device)

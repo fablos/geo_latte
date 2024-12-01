@@ -34,7 +34,7 @@ def generate_annular_points_3d(num_points, r_inner, r_outer):
     return torch.tensor(points, dtype=torch.float16)
 
 # Function to embed 2D points into a 100D space with nonlinearity
-def embed_points_2d_to_100d(points_2d):
+def embed_points_2d_to_higher_dim(points_2d, n_dim=100):
     # Example non-linear transformations
     def nonlinear_map(x, y):
         features = []
@@ -54,9 +54,9 @@ def embed_points_2d_to_100d(points_2d):
 #        features.append(np.sqrt(np.abs(x * y)))
 #        features.append(np.exp(-x**2 - y**2))
         # Expand to 100 dimensions by repeating patterns
-        while len(features) < 100:
+        while len(features) < n_dim:
             features.append(features[len(features) % len(features)])  # Repeat patterns
-        return np.array(features[:100])  # Truncate or pad to exactly 100 features
+        return np.array(features[:n_dim])  # Truncate or pad to exactly 100 features
 
     # Apply the transformation to each 2D point
     points_100d = np.array([nonlinear_map(x, y) for x, y in points_2d])
